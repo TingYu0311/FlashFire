@@ -1,2 +1,2 @@
-# FlashFire
-RDK
+1. The RDK_Fire folder is for the edge computing section, where x5m.bin is the trained and quantified YOLO11 model, and rdk_fire.py is the source code for the edge computing processing section. 
+2. The HTML folder contains the front-end web pages and the back-end database sections. Among them, index.html is the core source code of the front-end website, and database.py is the core source code of the back-end database.
