@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>山火监测</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="renderer" content="webkit">
+  <link rel="shortcut icon" href="./favicon.ico">
+  <link rel="stylesheet" href="./css/common.css">
+  <link rel="stylesheet" href="./css/index.css">
+  <link rel="stylesheet" href="https://at.alicdn.com/t/font_2143783_iq6z4ey5vu.css">
+  <script>
+    // 检测 userAgent（浏览器信息）
+    !(function () {
+      const userAgent = navigator.userAgent
+      // 验证是否为Android或iPhone
+      const android = userAgent.match(/(Android);?[\s\/]+([\d.]+)?/)
+      const iphone = userAgent.match(/(iPhone\sOS)\s([\d_]+)/)
+
+      // 如果是Android或iPhone，则跳转至移动站点
+      if (android || iphone) {
+        location.href = 'https://developer.mozilla.org/zh-CN/'
+      }
+
+    })()
+  </script>
+
+  <!-- 设备在线小圆点 -->
+  <style>
+    .device-status {
+      display: flex;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      color: #333;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .status-dot.online {
+      background-color: #2ecc71;
+      box-shadow: 0 0 5px #2ecc71;
+      position: relative;
+      margin-left: 10px;
+      /* 距离右边2px */
+    }
+
+    .status-dot.offline {
+      background-color: #cc2e2e;
+      box-shadow: 0 0 5px #cc2e2e;
+      position: relative;
+      margin-left: 10px;
+      /* 距离右边2px */
+    }
+
+    .status-dot.online::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background-color: #2ecc71;
+      animation: status-pulse 1.5s infinite;
+    }
+
+    .status-dot.offline::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background-color: #cc2e2e;
+      animation: status-pulse 1.5s infinite;
+    }
+
+    @keyframes status-pulse {
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+
+      100% {
+        transform: scale(2.5);
+        opacity: 0;
+      }
+    }
+  </style>
+  <!-- 弹窗 -->
+  <style>
+    /* 设备卡片样式 */
+    .device-card {
+      width: 300px;
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .device-name {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+
+    /* 底部操作栏样式 */
+    .xtx_panel .xtx_panel_goods_2 .extra {
+      width: 100%;
+      height: 86px;
+      padding-top: 10px;
+      transition: bottom 0.3s;
+      background-color: #27BA9B;
+      position: absolute;
+      bottom: -86px;
+      left: 0;
+      color: white;
+      text-align: center;
+    }
+
+    .extra a {
+      color: white;
+      text-decoration: none;
+      display: block;
+      padding: 10px;
+    }
+
+    .extra span {
+      display: block;
+      margin: 5px 0;
+    }
+
+    /* 鼠标悬停时显示底部操作栏 */
+    .device-card:hover .extra {
+      bottom: 0;
+    }
+
+    /* 弹窗样式 */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-container {
+      display: flex;
+      width: 90%;
+      max-width: 900px;
+      /* 增加宽度以容纳所有内容 */
+      height: 82vh;
+      max-height: 650px;
+    }
+
+    .modal-content {
+      background-color: white;
+      border-radius: 8px 0 0 8px;
+      width: 50%;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      position: relative;
+      overflow-y: auto;
+    }
+
+    /* 右侧组合区域 - 图片和按钮 */
+    .modal-right-panel {
+      width: 50%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 图片区域 */
+    .modal-image-area {
+      height: 60%;
+      background-color: #f8f8f8;
+      padding: 15px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .image-placeholder {
+      width: 100%;
+      height: 100%;
+      background-color: #eee;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #999;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .image-placeholder img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    /* 按钮区域 */
+    .command-buttons {
+      height: 40%;
+      background-color: #f0f0f0;
+      border-radius: 0 0 8px 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .command-btn {
+      background-color: #27BA9B;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 20px;
+      margin: 4px 0;
+      cursor: pointer;
+      font-size: 14px;
+      width: 100%;
+      text-align: center;
+      transition: background-color 0.3s;
+    }
+
+    .command-btn:hover {
+      background-color: #1f9c82;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin: 0;
+    }
+
+    .close-btn {
+      font-size: 24px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      color: #999;
+    }
+
+    .device-details p {
+      margin: 10px 0;
+      line-height: 1.5;
+      font-size: 16px;
+    }
+
+    .detail-label {
+      font-weight: bold;
+      color: #666;
+      font-size: 16px;
+    }
+
+    .panel {
+      background: rgba(30, 30, 46, 0.7);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    h2 {
+      color: #64b5f6;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid rgba(100, 181, 246, 0.3);
+    }
+
+    .log-panel {
+      grid-column: span 2;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    /* 侧边栏样式 */
+    /* 侧边栏容器样式 */
+    .sidebar-container {
+      position: relative;
+      display: inline-block;
+      vertical-align: top;
+      margin-left: 20px;
+      /* 与分类菜单保持一定距离 */
+    }
+
+    /* 侧边栏样式 */
+    .sidebar {
+      position: absolute;
+      top: 0;
+      right: -220px;
+      /* 初始隐藏在右侧 */
+      width: 210px;
+      height: auto;
+      background-color: #fff;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+      z-index: 999;
+      transition: all 0.3s ease;
+      padding: 20px;
+      overflow-y: auto;
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .sidebar.show {
+      left: 180px;
+      /* 显示时从右侧滑入 */
+      opacity: 1;
+      visibility: visible;
+      height: 500px;
+    }
+
+    .sidebar-item {
+      padding: 10px;
+      width: 150px;
+      margin: 10px 0;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+      transition: background-color 0.2s;
+    }
+
+    .sidebar-item {
+      position: relative;
+      padding: 10px 15px;
+      transition: all 0.3s ease;
+      color: #2C3E50;
+      text-decoration: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .sidebar-item:hover {
+      background-color: #E8F7F3;
+      ;
+      color: #27BA9B;
+      transform: translateX(5px);
+    }
+
+    .sidebar-item::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background-color: #27BA9B;
+      transition: all 0.3s ease;
+    }
+
+    .sidebar-item:hover::after {
+      width: 100%;
+    }
+
+    /* 点击效果 */
+    .sidebar-item:active {
+      transform: translateX(5px) scale(0.98);
+    }
+
+
+    .sidebar-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      cursor: pointer;
+      font-size: 20px;
+    }
+
+    /* 添加截图成功通知的样式 */
+    .capture-notification {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      animation: fadeIn 0.3s;
+      z-index: 100;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+  </style>
+
+  <style>
+    /* 线路分类图标动画效果 */
+    .xtx_category_super li {
+      position: relative;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .xtx_category_super li a {
+      position: relative;
+      color: #ffffff;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      padding: 8px 0;
+    }
+
+    .xtx_category_super li a::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background-color: #27BA9B;
+      transition: all 0.3s ease;
+    }
+
+    .xtx_category_super li:hover a {
+      color: #27BA9B;
+    }
+
+    .xtx_category_super li:hover a::after {
+      width: 100%;
+    }
+
+    /* 图标动画效果 */
+    .sprites.category-icon {
+      margin-left: 5px;
+      transition: all 0.3s ease;
+      opacity: 0.7;
+    }
+
+    .xtx_category_super li:hover .category-icon {
+      opacity: 1;
+      transform: translateX(3px);
+    }
+
+    .xtx_category_super li:active .category-icon {
+      transform: translateX(3px) scale(0.95);
+    }
+
+    /* 警报闪烁动画 */
+    .alert-blink {
+      animation: alertBlink 1s infinite;
+    }
+
+    @keyframes alertBlink {
+      0% {
+        background-color: red;
+      }
+
+      50% {
+        background-color: yellow;
+      }
+
+      100% {
+        background-color: red;
+      }
+    }
+
+    /* 正常状态 */
+    .normal-status {
+      background-color: #27BA9B;
+      /* 绿色 */
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 项部导航 -->
+  <div class="xtx_topnav">
+    <div class="wrapper">
+      <!-- 顶部导航 -->
+      <ul class="xtx_navs">
+        <li>
+          <a href="./login.html">请先登录</a>
+        </li>
+        <li>
+          <a href="./register.html">免费注册</a>
+        </li>
+        <li>
+          <a href="javascript:;">设置</a>
+        </li>
+        <li>
+          <a href="javascript:;">
+            <i class="mobile sprites"></i>
+            手机版
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+  <!-- 头部 -->
+  <div class="xtx_header">
+    <div class="wrapper">
+      <!-- 网站Logo -->
+      <h1 class="xtx_logo"><a href="/">山火监测</a></h1>
+      <!-- 主导航 -->
+      <div class="xtx_navs">
+        <ul class="clearfix">
+          <li>
+            <a href="./index.html">首页</a>
+          </li>
+          <li>
+            <a href="manage.html">设备管理</a>
+          </li>
+          <li>
+            <a href="record.html">历史记录</a>
+          </li>
+        </ul>
+      </div>
+      <!-- 站内搜索 -->
+      <div class="xtx_search clearfix">
+        <!-- 搜索框 -->
+        <div class="xtx_search_wrapper">
+          <input type="text" placeholder="搜一搜" onclick="location.href='./search.html'">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 分类及焦点图 -->
+  <div class="xtx_entry">
+    <div class="wrapper">
+      <!-- 分类 -->
+
+      <!-- 将侧边栏容器移动到分类菜单的右侧 -->
+      <div class="xtx_category">
+        <!-- 顶级分类 -->
+        <ul class="xtx_category_super">
+          <li class="alert">
+            <a href="javascript:;">
+              线路Ⅰ
+            </a>
+            <i class="sprites category-icon" data-line="1"></i>
+          </li>
+          <li>
+            <a href="javascript:;">
+              线路Ⅱ
+            </a>
+            <i class="sprites category-icon" data-line="2"></i>
+          </li>
+          <li>
+            <a href="javascript:;">
+              线路Ⅲ
+            </a>
+            <i class="sprites category-icon" data-line="3"></i>
+          </li>
+        </ul>
+
+        <!-- 子分类 -->
+        <div class="xtx_category_subset"></div>
+      </div>
+
+      <!-- 侧边栏容器放在分类菜单后面 -->
+      <div class="sidebar-container">
+        <div class="sidebar" id="sidebarLine1">
+          <span class="sidebar-close">&times;</span>
+          <div class="sidebar-item" data-device="1">设备1</div>
+          <div class="sidebar-item" data-device="2">设备2</div>
+          <div class="sidebar-item" data-device="3">设备3</div>
+          <div class="sidebar-item" data-device="4">设备4</div>
+          <div class="sidebar-item" data-device="5">设备5</div>
+        </div>
+
+        <div class="sidebar" id="sidebarLine2">
+          <span class="sidebar-close">&times;</span>
+
+          <div class="sidebar-item" data-device="6">设备6</div>
+          <div class="sidebar-item" data-device="7">设备7</div>
+
+        </div>
+
+        <div class="sidebar" id="sidebarLine3">
+          <span class="sidebar-close">&times;</span>
+          <div class="sidebar-item" data-device="8">设备8</div>
+          <div class="sidebar-item" data-device="9">设备9</div>
+          <div class="sidebar-item" data-device="10">设备10</div>
+          <div class="sidebar-item" data-device="11">设备11</div>
+        </div>
+      </div>
+
+      <!-- 焦点图 -->
+      <div class="xtx_banner">
+        <ul>
+          <li><a href="javascript:;"><img src="./images/1.png" alt=""></a></li>
+          <li><a href="javascript:;"><img src="./images/2.png" alt=""></a></li>
+          <li><a href="javascript:;"><img src="./images/3.png" alt=""></a></li>
+          <li><a href="javascript:;"><img src="./images/4.png" alt=""></a></li>
+          <li><a href="javascript:;"><img src="./images/5.png" alt=""></a></li>
+          <li><a href="javascript:;"><img src="./images/6.png" alt=""></a></li>
+        </ul>
+        <!-- 切换按钮 -->
+        <a href="javascript:;" class="prev sprites"></a>
+        <a href="javascript:;" class="next sprites"></a>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 设备信息弹窗 -->
+  <div class="modal-overlay" id="infoModal">
+    <div class="modal-container">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">设备1 详细信息</h3>
+          <button class="close-btn">&times;</button>
+        </div>
+        <div class="device-details">
+          <p><span class="detail-label">设备ID:</span> DEV-2023-001</p>
+          <p><span class="detail-label">位置:</span> <span class="location-value">暂无数据</span></p>
+          <p><span class="detail-label">线路:</span> I 段</p>
+          <p><span class="detail-label">状态:</span> <span style="color:red">停止运行</span></p>
+          <p><span class="detail-label">温湿度:</span> <span id="temperatureHumidity">暂无数据</span></p>
+          <p><span class="detail-label">安装日期:</span> 2022-09-10</p>
+          <p><span class="detail-label">保修期至:</span> 2025-06-20</p>
+        </div>
+      </div>
+
+      <!-- 右侧组合区域 - 图片和按钮 -->
+      <div class="modal-right-panel">
+        <!-- 图片区域 -->
+        <div class="modal-image-area">
+          <div class="image-placeholder">
+            <div class="placeholder" id="placeholder">请点击"开始检测"按钮启动图像传输</div>
+            <img id="liveImage" alt="实时设备图片" style="display:none; width:100%; height:100%; object-fit:contain;">
+          </div>
+        </div>
+
+        <!-- 按钮区域 -->
+        <div class="command-buttons">
+          <button class="command-btn btn-start" onclick="sendCommand('A')">
+            <i class="fas fa-play-circle"></i>
+            <span>开始检测</span>
+          </button>
+
+          <button class="command-btn btn-stop" onclick="sendCommand('B')">
+            <i class="fas fa-stop-circle"></i>
+            <span>停止检测</span>
+          </button>
+
+          <button class="command-btn btn-pause" onclick="sendCommand('O')">
+            <i class="fas fa-pause-circle"></i>
+            <span>停止发送</span>
+          </button>
+
+          <button class="command-btn btn-resume" onclick="sendCommand('S')">
+            <i class="fas fa-play-circle"></i>
+            <span>继续发送</span>
+          </button>
+
+          <button class="command-btn btn-capture" onclick="sendCommand('K')">
+            <i class="fas fa-camera"></i>
+            <span>截取图片</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+
+    // 设备控制和状态监控
+    document.addEventListener('DOMContentLoaded', function () {
+      const modal = document.getElementById('infoModal');
+      const liveImage = document.getElementById('liveImage');
+      const placeholder = document.getElementById('placeholder');
+      const modalLocationLabel = document.querySelector('.device-details p:nth-child(2)');
+      const deviceStatusElement = document.querySelector('.device-details p:nth-child(4) span:last-child');
+      const baseUrl = 'http://192.168.58.62:5000';
+      let imgRefreshInterval = null;
+      let locRefreshInterval = null;
+      let fireAlertInterval = null;
+      let isDetectionRunning = false;
+      let lastCaptureTime = null;
+      let tempHumInterval = null;
+      let deviceStatusInterval = null;
+
+      // 获取设备状态
+      function fetchDeviceStatus(deviceId) {
+        fetch(`${baseUrl}/get_device_status?device_id=${deviceId}`)
+          .then(response => {
+            if (!response.ok) throw new Error(`状态获取失败: ${response.status}`);
+            return response.json();
+          })
+          .then(data => {
+            if (data.status === 'success') {
+              updateDeviceStatus(
+                data.is_running ? '正常运行' : '停止运行',
+                data.is_running
+              );
+            } else {
+              console.error('设备状态获取失败:', data.message);
+              updateDeviceStatus('状态未知', false);
+            }
+          })
+          .catch(error => {
+            console.error('设备状态获取错误:', error);
+            updateDeviceStatus('获取失败', false);
+          });
+      }
+
+      // 更新设备状态显示
+      function updateDeviceStatus(statusText, isRunning) {
+        if (deviceStatusElement) {
+          deviceStatusElement.textContent = statusText;
+          deviceStatusElement.style.color = isRunning ? 'green' : 'red';
+        }
+      }
+
+      function showDeviceModal(deviceId) {
+        const modalTitle = document.querySelector('.modal-title');
+        modalTitle.textContent = `设备${deviceId} 详细信息`;
+        modal.style.display = 'flex';
+
+        // 获取并显示设备状态
+        fetchDeviceStatus(deviceId);
+
+        // 设置定时器定期更新状态
+        if (deviceStatusInterval) clearInterval(deviceStatusInterval);
+        deviceStatusInterval = setInterval(() => fetchDeviceStatus(deviceId), 3000);
+      }
+
+      // 格式化坐标显示
+      function formatCoordinate(coord, isLatitude) {
+        if (coord === null || isNaN(coord)) return null;
+        const absValue = Math.abs(Number(coord));
+        const direction = isLatitude ? (coord >= 0 ? 'N' : 'S') : (coord >= 0 ? 'E' : 'W');
+        return `${absValue.toFixed(2)}°${direction}`;
+      }
+
+      // 更新位置显示
+      function updateLocDisp(latitude, longitude) {
+        const locValueElement = document.querySelector('.location-value');
+        const latStr = formatCoordinate(latitude, true);
+        const lngStr = formatCoordinate(longitude, false);
+        if (!latStr || !lngStr) {
+          locValueElement.textContent = '获取中...';
+          return;
+        }
+        locValueElement.textContent = `${latStr}, ${lngStr}`;
+      }
+
+      function fetchLatestLoc() {
+        fetch(`${baseUrl}/get_latest_location`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.status === 'success' && data.location) {
+              updateLocDisp(data.location.latitude, data.location.longitude);
+            } else {
+              document.querySelector('.location-value').textContent = '暂无数据';
+            }
+          })
+          .catch(error => {
+            console.error('位置获取失败:', error);
+            document.querySelector('.location-value').textContent = '获取失败';
+          });
+      }
+
+      // 启动位置刷新
+      function startLocRefresh() {
+        fetchLatestLoc();
+        locRefreshInterval = setInterval(fetchLatestLoc, 3000);
+      }
+
+      // 停止位置刷新
+      function stopLocRefresh() {
+        if (locRefreshInterval) {
+          clearInterval(locRefreshInterval);
+          locRefreshInterval = null;
+        }
+      }
+
+      // 获取最新温湿度
+      function fetchLatestTempHum() {
+        fetch(`${baseUrl}/get_latest_temperature_humidity`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.status === 'success' && data.record) {
+              const temp = data.record.temperature;
+              const humi = data.record.humidity;
+              document.getElementById('temperatureHumidity').textContent =
+                `${temp}°C, ${humi}%`;
+            }
+          })
+          .catch(error => {
+            console.error('温湿度获取失败:', error);
+            document.getElementById('temperatureHumidity').textContent = '获取失败';
+          });
+      }
+
+      // 启动温湿度刷新
+      function startTempHumRefresh() {
+        fetchLatestTempHum();
+        tempHumInterval = setInterval(fetchLatestTempHum, 11000);
+      }
+
+      // 停止温湿度刷新
+      function stopTempHumRefresh() {
+        if (tempHumInterval) {
+          clearInterval(tempHumInterval);
+          tempHumInterval = null;
+        }
+      }
+
+      // 启动图片刷新
+      function startImgRefresh() {
+        if (imgRefreshInterval) clearInterval(imgRefreshInterval);
+        imgRefreshInterval = setInterval(fetchLatestImg, 2000);
+        fetchLatestImg();
+      }
+
+      // 停止图片刷新
+      function stopImgRefresh() {
+        if (imgRefreshInterval) {
+          clearInterval(imgRefreshInterval);
+          imgRefreshInterval = null;
+        }
+        liveImage.style.display = 'none';
+        placeholder.style.display = 'block';
+        placeholder.textContent = '请点击"开始检测"按钮启动图像传输';
+        isDetectionRunning = false;
+      }
+
+      // 获取最新图片
+      function fetchLatestImg() {
+        const timestamp = new Date().getTime();
+        fetch(`${baseUrl}/get_latest_image?t=${timestamp}`)
+          .then(response => {
+            if (!response.ok) throw new Error(`图片加载失败: ${response.status}`);
+            return response.blob();
+          })
+          .then(blob => {
+            if (blob.size === 0) throw new Error("接收到空图片");
+            const url = URL.createObjectURL(blob);
+            liveImage.onload = () => {
+              if (liveImage.previousSrc) URL.revokeObjectURL(liveImage.previousSrc);
+              liveImage.previousSrc = url;
+              if (lastCaptureTime && (Date.now() - lastCaptureTime < 3000)) {
+                showCaptureNotification();
+              }
+            };
+            liveImage.src = url;
+            liveImage.style.display = 'block';
+            placeholder.style.display = 'none';
+          })
+          .catch(error => {
+            console.error('图片加载失败:', error);
+            placeholder.textContent = `错误: ${error.message}`;
+            placeholder.style.display = 'block';
+            liveImage.style.display = 'none';
+          });
+      }
+
+      // 显示截图通知
+      function showCaptureNotification() {
+        const notification = document.createElement('div');
+        notification.className = 'capture-notification';
+        notification.textContent = '截图成功！';
+        document.querySelector('.modal-image-area').appendChild(notification);
+        setTimeout(() => notification.remove(), 3000);
+      }
+
+      // 火灾警报检查函数
+      function checkFireAlert() {
+        fetch(`${baseUrl}/check_fire_alert`)
+          .then(response => {
+            if (!response.ok) throw new Error(`警报检查失败: ${response.status}`);
+            return response.json();
+          })
+          .then(data => {
+            const alertLine = document.querySelector('.xtx_category_super li.alert');
+            if (data.alert === 'Y') {
+              alertLine.classList.add('alert-blink');
+              alertLine.classList.remove('normal-status');
+            } else {
+              alertLine.classList.remove('alert-blink');
+              alertLine.classList.add('normal-status');
+            }
+          })
+          .catch(error => {
+            console.error('火灾警报检查错误:', error);
+          });
+      }
+
+      // 启动定期轮询
+      function startFireAlertPolling() {
+        if (!fireAlertInterval) {
+          fireAlertInterval = setInterval(checkFireAlert, 3000);
+          checkFireAlert();
+        }
+      }
+
+      // 停止轮询
+      function stopFireAlertPolling() {
+        if (fireAlertInterval) {
+          clearInterval(fireAlertInterval);
+          fireAlertInterval = null;
+        }
+      }
+
+      // 发送控制指令
+      function sendCommand(command) {
+        const btn = event.currentTarget;
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<span class="loading"></span> 发送中...';
+        btn.disabled = true;
+
+        fetch(`${baseUrl}/send_command/${command}`, { method: 'POST' })
+          .then(response => {
+            if (!response.ok) throw new Error(`指令发送失败: ${response.status}`);
+            return response.json();
+          })
+          .then(data => {
+            if (data.status === 'success') {
+              switch (command) {
+                case 'A': // 开始检测
+                  isDetectionRunning = true;
+                  startImgRefresh();
+                  startLocRefresh();
+                  startFireAlertPolling();
+                  startTempHumRefresh();
+                  placeholder.textContent = '正在启动检测...';
+                  updateDeviceStatus('正常运行', true);
+                  if (window.location.pathname.includes('manage.html')) {
+                    locRefreshInterval = startLocRefresh();
+                  }
+                  break;
+                case 'B': // 停止检测
+                  stopImgRefresh();
+                  stopLocRefresh();
+                  stopFireAlertPolling();
+                  stopTempHumRefresh();
+                  updateDeviceStatus('停止运行', false);
+                  const alertLine = document.querySelector('.xtx_category_super li.alert');
+                  if (alertLine) {
+                    alertLine.classList.remove('alert-blink');
+                    alertLine.classList.remove('normal-status');
+                  }
+                  break;
+                case 'O': // 停止发送
+                  updateDeviceStatus('暂停运行', false);
+                  break;
+                case 'S': // 继续发送
+                  updateDeviceStatus('正常运行', true);
+                  break;
+                case 'K': // 截取图片
+                  lastCaptureTime = Date.now();
+                  fetchLatestImg();
+                  break;
+              }
+            }
+          })
+          .catch(error => {
+            console.error('指令发送失败:', error);
+            placeholder.textContent = `指令发送失败: ${error.message}`;
+          })
+          .finally(() => {
+            setTimeout(() => {
+              btn.innerHTML = originalHTML;
+              btn.disabled = false;
+            }, 1000);
+          });
+      }
+
+      // 绑定按钮事件
+      document.querySelectorAll('.command-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+          const command = this.getAttribute('onclick').match(/'([^']+)'/)[1];
+          sendCommand(command);
+        });
+      });
+
+      // 侧边栏和设备弹窗功能
+      const sidebarLine1 = document.getElementById('sidebarLine1');
+      const sidebarLine2 = document.getElementById('sidebarLine2');
+      const sidebarLine3 = document.getElementById('sidebarLine3');
+      const categoryIcons = document.querySelectorAll('.category-icon');
+      const sidebarCloseBtns = document.querySelectorAll('.sidebar-close');
+      const sidebarItems = document.querySelectorAll('.sidebar-item');
+      const modalCloseBtn = document.querySelector('.close-btn');
+
+      categoryIcons.forEach(icon => {
+        icon.addEventListener('click', function (e) {
+          e.stopPropagation();
+          const line = this.getAttribute('data-line');
+          document.querySelectorAll('.sidebar').forEach(sidebar => {
+            sidebar.classList.remove('show');
+          });
+          if (line === '1') sidebarLine1.classList.add('show');
+          else if (line === '2') sidebarLine2.classList.add('show');
+          else if (line === '3') sidebarLine3.classList.add('show');
+        });
+      });
+
+      sidebarCloseBtns.forEach(btn => {
+        btn.addEventListener('click', function () {
+          this.closest('.sidebar').classList.remove('show');
+        });
+      });
+
+      document.addEventListener('click', function (e) {
+        if (!e.target.closest('.sidebar') && !e.target.classList.contains('category-icon')) {
+          document.querySelectorAll('.sidebar').forEach(sidebar => {
+            sidebar.classList.remove('show');
+          });
+        }
+      });
+
+      sidebarItems.forEach(item => {
+        item.addEventListener('click', function () {
+          const deviceId = this.getAttribute('data-device');
+          if (deviceId === '1') {
+            showDeviceModal(deviceId);
+          }
+          document.querySelectorAll('.sidebar').forEach(sidebar => {
+            sidebar.classList.remove('show');
+          });
+        });
+      });
+
+      modalCloseBtn.addEventListener('click', function () {
+        modal.style.display = 'none';
+        stopImgRefresh();
+        stopLocRefresh();
+        stopFireAlertPolling();
+        stopTempHumRefresh();
+        if (deviceStatusInterval) clearInterval(deviceStatusInterval);
+      });
+
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) {
+          modal.style.display = 'none';
+          stopImgRefresh();
+          stopLocRefresh();
+          stopFireAlertPolling();
+          stopTempHumRefresh();
+          if (deviceStatusInterval) clearInterval(deviceStatusInterval);
+        }
+      });
+    });
+    // 轮播图功能
+    document.addEventListener('DOMContentLoaded', function () {
+      const banner = document.querySelector('.xtx_banner');
+      const bannerUl = banner.querySelector('ul');
+      const bannerItems = banner.querySelectorAll('li');
+      const prevBtn = banner.querySelector('.prev');
+      const nextBtn = banner.querySelector('.next');
+
+      let currentIndex = 0;
+      let timer = null;
+      const totalItems = bannerItems.length;
+
+      function initCarousel() {
+        bannerItems.forEach((item, index) => {
+          item.style.opacity = index === 0 ? '1' : '0';
+        });
+        startAutoPlay();
+      }
+
+      function startAutoPlay() {
+        clearInterval(timer);
+        timer = setInterval(goToNext, 3000);
+      }
+
+      function goToNext() {
+        bannerItems[currentIndex].style.opacity = '0';
+        currentIndex = (currentIndex + 1) % totalItems;
+        bannerItems[currentIndex].style.opacity = '1';
+      }
+
+      function goToPrev() {
+        bannerItems[currentIndex].style.opacity = '0';
+        currentIndex = (currentIndex - 1 + totalItems) % totalItems;
+        bannerItems[currentIndex].style.opacity = '1';
+      }
+
+      prevBtn.addEventListener('click', function () {
+        goToPrev();
+        resetAutoPlay();
+      });
+
+      nextBtn.addEventListener('click', function () {
+        goToNext();
+        resetAutoPlay();
+      });
+
+      function resetAutoPlay() {
+        clearInterval(timer);
+        startAutoPlay();
+      }
+
+      initCarousel();
+    });
+  </script>
+
+
+</body>
+
+</html>
